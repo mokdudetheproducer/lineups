@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quarter Lineups — 14U</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF1EA; --panel:#FFFFFF; --ink:#12241B; --muted:#5E6B62; --rule:#D5DBD2;
+    --pitch:#1F6B3B; --pitch-dark:#185A31; --chalk:#F7F9F4;
+    --in:#E8672B; --out:#8B948C; --warn:#B5321B; --warn-bg:#FBE9E4;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Barlow Semi Condensed",system-ui,sans-serif}
+  button,input,select{font:inherit;color:inherit}
+  h1,h2,h3{margin:0;line-height:1.1}
+  h1{font-size:34px;font-weight:700}
+  h2{font-size:22px;font-weight:700}
+  h3{font-size:17px;font-weight:600}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px}
+  header p{margin:0;color:var(--muted)}
+  section{background:var(--panel);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  section > summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  section > summary::-webkit-details-marker{display:none}
+  details section{margin:0}
+  .count{color:var(--muted);font-weight:400}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
+  label.small{font-size:13px;color:var(--muted)}
+  input[type=text],input[type=number],input[type=password],select{
+    padding:9px 10px;border:1px solid var(--rule);border-radius:8px;background:#fff;width:100%}
+  .btn{padding:9px 14px;border-radius:8px;border:1px solid var(--rule);background:#fff;cursor:pointer}
+  .btn:hover{border-color:var(--ink)}
+  .btn.primary{background:var(--pitch);color:#fff;border-color:var(--pitch);font-weight:700;font-size:18px;padding:13px 18px;width:100%}
+  .btn.primary:hover{background:var(--pitch-dark)}
+  .btn.danger{color:var(--warn)}
+  .btn.tiny{padding:4px 8px;font-size:14px}
+  button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--in);outline-offset:2px}
+
+  /* position picker */
+  .pos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+  .pos-grid label{display:flex;align-items:center;justify-content:center;gap:4px;padding:7px 4px;border:1px solid var(--rule);border-radius:8px;cursor:pointer;font-weight:600;user-select:none}
+  .pos-grid label:has(input:checked){background:var(--pitch);color:#fff;border-color:var(--pitch)}
+  .pos-grid input{position:absolute;opacity:0;width:0;height:0}
+
+  /* roster */
+  .roster{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--rule)}
+  .roster li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule)}
+  .roster li.off .name,.roster li.off .tags{opacity:.45;text-decoration:line-through}
+  .roster .name{font-weight:600}
+  .roster .num{color:var(--muted);font-weight:400;margin-right:6px}
+  .tags{font-size:13px;color:var(--muted)}
+  .switch{width:44px;height:26px;border-radius:13px;background:#C9D0C6;border:none;position:relative;cursor:pointer;flex:none}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+  .switch[aria-checked=true]{background:var(--pitch)}
+  .switch[aria-checked=true]::after{left:21px}
+  .empty{color:var(--muted);padding:18px 0 6px}
+
+  /* results */
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tabs button{flex:1;padding:10px 0;border-radius:8px;border:1px solid var(--rule);background:#fff;font-weight:700;font-size:18px;cursor:pointer}
+  .tabs button[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .pitch{width:100%;height:auto;display:block;border-radius:var(--radius);background:var(--pitch)}
+  .pitch .chip{cursor:pointer}
+  .pitch .chip circle{fill:var(--chalk);stroke:var(--pitch-dark);stroke-width:2}
+  .pitch .chip.new circle{fill:var(--in);stroke:#B94D17}
+  .pitch .chip.new .num{fill:#fff}
+  .pitch .chip.hole circle{fill:none;stroke:var(--chalk);stroke-dasharray:4 3}
+  .pitch .num{font-weight:700;font-size:15px;text-anchor:middle;fill:var(--ink)}
+  .pitch .nm{font-size:12px;font-weight:600;text-anchor:middle;fill:#fff}
+  .pitch .slot{font-size:10px;text-anchor:middle;fill:rgba(255,255,255,.7)}
+  .legend{display:flex;gap:16px;font-size:14px;color:var(--muted);margin:10px 0 4px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+  .editbox{margin-top:10px;padding:12px;border:1px dashed var(--rule);border-radius:8px}
+  .subs{margin-top:16px}
+  .subs h3{margin-bottom:8px}
+  .subs ul{list-style:none;margin:0;padding:0}
+  .subs li{padding:8px 0;border-top:1px solid var(--rule);display:flex;gap:10px;align-items:baseline}
+  .subs .tag{font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px;color:#fff;flex:none;min-width:38px;text-align:center}
+  .tag.in{background:var(--in)} .tag.out{background:var(--out)} .tag.move{background:var(--ink)}
+  .subs .slot{color:var(--muted)}
+  .minutes{margin-top:16px;font-size:14px}
+  .minutes table{width:100%;border-collapse:collapse}
+  .minutes td,.minutes th{text-align:left;padding:5px 0;border-top:1px solid var(--rule)}
+  .minutes th{font-weight:600;color:var(--muted)}
+  .minutes .q{display:inline-block;width:14px;height:14px;border-radius:3px;background:var(--rule);margin-right:3px;vertical-align:-2px}
+  .minutes .q.on{background:var(--pitch)}
+  .alert{background:var(--warn-bg);color:var(--warn);padding:10px 12px;border-radius:8px;margin-bottom:10px}
+  .note{color:var(--muted);font-size:14px;margin:8px 0 0}
+  @media (max-width:480px){h1{font-size:28px}.pos-grid{grid-template-columns:repeat(4,1fr)}}
+  @media print{
+    body{background:#fff} .wrap{max-width:none;padding:0}
+    #rosterSec,#setupSec,#aiSec,#build,.tabs,.editbox,.legend{display:none!important}
+    .print-q{page-break-inside:avoid;margin-bottom:12px}
+  }
+  @media (prefers-reduced-motion:reduce){.switch::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Quarter lineups</h1><p>Four quarters, everyone plays at least two.</p></div>
+    <button class="btn" id="printBtn" type="button">Print</button>
+  </header>
+
+  <details id="rosterSec" open>
+    <summary><h2>Roster <span class="count" id="rosterCount"></span></h2><span>▾</span></summary>
+    <section>
+      <div class="row">
+        <div class="field"><label class="small" for="pName">Name</label><input id="pName" type="text" autocomplete="off"></div>
+        <div class="field" style="flex:0 0 80px;min-width:80px"><label class="small" for="pNum">#</label><input id="pNum" type="number" min="0" max="99"></div>
+      </div>
+      <label class="small" style="display:block;margin-top:10px">Positions this player can cover (GK, defense, midfield, forward — tap in order of preference)</label>
+      <div class="pos-grid" id="posGrid"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="saveBtn" type="button">Add player</button>
+        <button class="btn" id="cancelBtn" type="button" hidden>Cancel</button>
+        <span style="flex:1"></span>
+        <button class="btn tiny" id="sampleBtn" type="button">Reset to default roster</button>
+      </div>
+      <ul class="roster" id="roster"></ul>
+    </section>
+  </details>
+
+  <details id="setupSec">
+    <summary><h2>Game setup</h2><span>▾</span></summary>
+    <section>
+      <div class="row">
+        <div class="field"><label class="small" for="size">Players on the field</label>
+          <select id="size"><option value="11">11 v 11</option><option value="9">9 v 9</option><option value="7">7 v 7</option></select></div>
+        <div class="field"><label class="small" for="slots">Formation slots (edit freely)</label><input id="slots" type="text"></div>
+      </div>
+      <label class="row" style="margin-top:12px;gap:8px;cursor:pointer"><input type="checkbox" id="keepGK"> Keep the same goalkeeper all game when possible</label>
+      <label class="row" style="margin-top:6px;gap:8px;cursor:pointer"><input type="checkbox" id="fewSubs"> Prefer fewer substitutions over perfectly even time</label>
+    </section>
+  </details>
+
+  <details id="aiSec">
+    <summary><h2>Lineup engine</h2><span>▾</span></summary>
+    <section>
+      <div class="row">
+        <div class="field"><label class="small" for="llmProvider">Engine</label>
+          <select id="llmProvider">
+            <option value="builtin">Built-in solver (no internet needed)</option>
+            <option value="anthropic">Anthropic Claude</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="custom">Custom (OpenAI-compatible endpoint)</option>
+          </select></div>
+      </div>
+      <div class="row" id="llmFields" style="margin-top:8px" hidden>
+        <div class="field"><label class="small" for="llmKey">API key</label><input id="llmKey" type="password" autocomplete="off"></div>
+        <div class="field"><label class="small" for="llmModel">Model</label><input id="llmModel" type="text"></div>
+        <div class="field" id="llmEndpointField"><label class="small" for="llmEndpoint">Endpoint URL</label><input id="llmEndpoint" type="text" placeholder="https://.../v1/chat/completions"></div>
+      </div>
+      <p class="note">An AI engine gets the same roster and rules and returns lineups; if it fails or breaks a rule, the built-in solver takes over. Keys stay in this browser only.</p>
+      <div class="row" style="margin-top:10px"><button class="btn danger tiny" id="resetBtn" type="button">Clear all saved data</button></div>
+    </section>
+  </details>
+
+  <button class="btn primary" id="build" type="button">Build lineups</button>
+  <div id="alerts" style="margin-top:12px"></div>
+
+  <section id="results" hidden>
+    <div class="tabs" id="tabs"></div>
+    <div id="quarterView"></div>
+    <div class="legend"><span><i style="background:var(--chalk);border:1px solid var(--pitch-dark)"></i>Stayed on</span><span><i style="background:var(--in)"></i>Just came on</span><span>Tap a player to swap</span></div>
+    <div class="editbox" id="editbox" hidden></div>
+    <div class="subs" id="subs"></div>
+    <div class="minutes" id="minutes"></div>
+  </section>
+</div>
+
+<script>
+/* ---------- constants & state ---------- */
+const POSITIONS = ["GK","DEF","MID","FWD"];
+const GROUP = {GK:"GK", LB:"DEF",CB:"DEF",RB:"DEF", LM:"MID",CM:"MID",RM:"MID", LW:"FWD",ST:"FWD",RW:"FWD"};
+const groupOf = slot => GROUP[slot] || slot;
+const DEFAULT_PLAYERS = [["Aiden",["GK","DEF","MID"]],["Anders",["DEF","MID","FWD"]],["Axel",["MID","FWD"]],["Blake",["MID","FWD"]],
+  ["Brendan",["DEF"]],["Dalton",["GK","DEF","MID","FWD"]],["Isai",["DEF","MID"]],["Jose",["GK","DEF","MID"]],["Mavin",["DEF","MID","FWD"]],
+  ["Michael B",["DEF"]],["Michael T",["GK","DEF"]],["Parker",["DEF"]],["Saul",["DEF","MID"]],["Sean",["MID","FWD"]],["Spencer",["MID"]],
+  ["Zachary",["GK","MID"]],["Zeth",["MID","FWD"]]];
+const defaultRoster = () => DEFAULT_PLAYERS.map(([name,positions])=>({id:uid(),name,num:null,positions,available:true}));
+const PRESETS = {
+  11:"GK, LB, CB, CB, RB, CM, CM, CM, LW, ST, RW",
+  9:"GK, LB, CB, RB, CM, CM, LW, ST, RW",
+  7:"GK, LB, RB, LM, CM, RM, ST"
+};
+const KEY = "lineup-builder-v1";
+const uid = () => Math.random().toString(36).slice(2,9);
+let state = load() || {
+  players: [], size:11, slots: PRESETS[11], keepGK:true, fewSubs:false,
+  llm:{provider:"builtin", key:"", model:"", endpoint:""},
+  lineups:null, activeQ:0
+};
+// first run: seed the default roster; older saves: convert specific positions (CB, LM…) to groups
+if(!state.players.length) state.players = defaultRoster();
+state.players.forEach(p=>{ p.positions = [...new Set(p.positions.map(groupOf))]; });
+let editingId = null;
+let pickOrder = [];      // ordered positions picked in the form
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const slotList = () => state.slots.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean);
+const avail = () => state.players.filter(p=>p.available);
+const byId = id => state.players.find(p=>p.id===id);
+
+/* ---------- roster UI ---------- */
+function renderPosGrid(){
+  $("#posGrid").innerHTML = POSITIONS.map(p=>`<label><input type="checkbox" value="${p}"><span>${p}</span></label>`).join("");
+  $("#posGrid").addEventListener("change", e=>{
+    const v = e.target.value;
+    if(e.target.checked){ if(!pickOrder.includes(v)) pickOrder.push(v); }
+    else pickOrder = pickOrder.filter(x=>x!==v);
+  });
+}
+function setForm(p){
+  $("#pName").value = p ? p.name : "";
+  $("#pNum").value = p && p.num!=null ? p.num : "";
+  pickOrder = p ? [...p.positions] : [];
+  document.querySelectorAll("#posGrid input").forEach(i=> i.checked = pickOrder.includes(i.value));
+  editingId = p ? p.id : null;
+  $("#saveBtn").textContent = p ? "Save changes" : "Add player";
+  $("#cancelBtn").hidden = !p;
+}
+function renderRoster(){
+  const ul = $("#roster");
+  const n = state.players.length, a = avail().length;
+  $("#rosterCount").textContent = n ? `— ${a} of ${n} available` : "";
+  if(!n){ ul.innerHTML = `<li class="empty" style="display:block">No players yet. Add your first player above, or reset to the default roster.</li>`; return; }
+  ul.innerHTML = state.players.map(p=>`
+    <li class="${p.available?"":"off"}" data-id="${p.id}">
+      <button class="switch" role="switch" aria-checked="${p.available}" aria-label="${esc(p.name)} available" data-act="toggle"></button>
+      <div><div class="name"><span class="num">${p.num!=null?"#"+p.num:""}</span>${esc(p.name)}</div><div class="tags">${p.positions.join(" · ")||"no positions set"}</div></div>
+      <div class="row" style="gap:4px"><button class="btn tiny" data-act="edit">Edit</button><button class="btn tiny danger" data-act="del">✕</button></div>
+    </li>`).join("");
+}
+$("#roster").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  const id = b.closest("li").dataset.id, p = byId(id);
+  if(b.dataset.act==="toggle"){ p.available = !p.available; }
+  if(b.dataset.act==="del"){ if(confirm(`Remove ${p.name} from the roster?`)) state.players = state.players.filter(x=>x.id!==id); if(editingId===id) setForm(null); }
+  if(b.dataset.act==="edit"){ setForm(p); $("#pName").focus(); return; }
+  state.lineups=null; save(); renderRoster(); renderResults();
+});
+$("#saveBtn").addEventListener("click", ()=>{
+  const name = $("#pName").value.trim(); if(!name){ $("#pName").focus(); return; }
+  const num = $("#pNum").value===""? null : Number($("#pNum").value);
+  if(editingId){ const p = byId(editingId); Object.assign(p,{name,num,positions:[...pickOrder]}); }
+  else state.players.push({id:uid(), name, num, positions:[...pickOrder], available:true});
+  state.lineups=null; save(); setForm(null); renderRoster(); renderResults(); $("#pName").focus();
+});
+$("#cancelBtn").addEventListener("click", ()=>setForm(null));
+$("#sampleBtn").addEventListener("click", ()=>{
+  if(state.players.length && !confirm("Replace the current roster with the default team list?")) return;
+  state.players = defaultRoster();
+  state.lineups=null; save(); renderRoster(); renderResults();
+});
+
+/* ---------- setup UI ---------- */
+function renderSetup(){
+  $("#size").value = state.size; $("#slots").value = state.slots;
+  $("#keepGK").checked = state.keepGK; $("#fewSubs").checked = state.fewSubs;
+  $("#llmProvider").value = state.llm.provider; $("#llmKey").value = state.llm.key;
+  $("#llmModel").value = state.llm.model; $("#llmEndpoint").value = state.llm.endpoint;
+  syncLLMFields();
+}
+function syncLLMFields(){
+  const p = state.llm.provider;
+  $("#llmFields").hidden = p==="builtin";
+  $("#llmEndpointField").style.display = p==="custom" ? "" : "none";
+  const defaults = {anthropic:"claude-sonnet-4-6", openai:"gpt-4.1-mini", gemini:"gemini-2.5-flash", custom:""};
+  $("#llmModel").placeholder = defaults[p]||"";
+}
+$("#size").addEventListener("change", e=>{ state.size=Number(e.target.value); state.slots=PRESETS[state.size]; $("#slots").value=state.slots; state.lineups=null; save(); renderResults(); });
+$("#slots").addEventListener("change", e=>{ state.slots=e.target.value; state.lineups=null; save(); renderResults(); });
+$("#keepGK").addEventListener("change", e=>{ state.keepGK=e.target.checked; save(); });
+$("#fewSubs").addEventListener("change", e=>{ state.fewSubs=e.target.checked; save(); });
+["llmProvider","llmKey","llmModel","llmEndpoint"].forEach(id=> $("#"+id).addEventListener("input", ()=>{
+  state.llm = {provider:$("#llmProvider").value, key:$("#llmKey").value, model:$("#llmModel").value, endpoint:$("#llmEndpoint").value};
+  syncLLMFields(); save();
+}));
+$("#resetBtn").addEventListener("click", ()=>{ if(confirm("Clear roster, settings and lineups saved in this browser?")){ localStorage.removeItem(KEY); location.reload(); } });
+$("#printBtn").addEventListener("click", ()=>window.print());
+
+/* ---------- solver ---------- */
+// Rectangular Hungarian algorithm: rows = slots (n), cols = players (m ≥ n). Returns col index per row.
+function hungarian(a){
+  const n=a.length, m=a[0].length, INF=1e18;
+  const u=new Array(n+1).fill(0), v=new Array(m+1).fill(0), p=new Array(m+1).fill(0), way=new Array(m+1).fill(0);
+  for(let i=1;i<=n;i++){
+    p[0]=i; let j0=0; const minv=new Array(m+1).fill(INF), used=new Array(m+1).fill(false);
+    do{
+      used[j0]=true; const i0=p[j0]; let delta=INF, j1=0;
+      for(let j=1;j<=m;j++) if(!used[j]){
+        const cur=a[i0-1][j-1]-u[i0]-v[j];
+        if(cur<minv[j]){minv[j]=cur; way[j]=j0;}
+        if(minv[j]<delta){delta=minv[j]; j1=j;}
+      }
+      for(let j=0;j<=m;j++){ if(used[j]){u[p[j]]+=delta; v[j]-=delta;} else minv[j]-=delta; }
+      j0=j1;
+    }while(p[j0]!==0);
+    do{ const j1=way[j0]; p[j0]=p[j1]; j0=j1; }while(j0);
+  }
+  const ans=new Array(n).fill(-1);
+  for(let j=1;j<=m;j++) if(p[j]) ans[p[j]-1]=j-1;
+  return ans;
+}
+
+function canPlay(p, slot){ return p.positions.includes(groupOf(slot)); }
+function prefIdx(p, slot){ const i=p.positions.indexOf(groupOf(slot)); return i<0?9:i; }
+
+function buildOneGame(players, slots, opts, rng){
+  const played = Object.fromEntries(players.map(p=>[p.id,0]));
+  const lineups = [];
+  for(let q=0;q<4;q++){
+    const prev = lineups[q-1] || [];
+    const remaining = 4-q;
+    // priority order: must-play first (need >= remaining), then fewest quarters, then tie-breaks
+    const order = players.map(p=>{
+      const need = Math.max(0, 2-played[p.id]);
+      const onPrev = prev.includes(p.id);
+      let key = (need>=remaining ? 0 : 1)*1000 + played[p.id]*100;
+      key += (opts.fewSubs ? (onPrev?0:30) : (onPrev?12:0)); // fewSubs: keep starters; else favor bench
+      key += rng()*20;
+      return {p,key};
+    }).sort((a,b)=>a.key-b.key);
+    const rank = Object.fromEntries(order.map((o,i)=>[o.p.id,i]));
+    const m = Math.max(players.length, slots.length);
+    const cost = slots.map((slot,si)=> Array.from({length:m},(_,j)=>{
+      const p = players[j]; if(!p) return 1e6;                     // dummy column → empty slot
+      if(!canPlay(p,slot)) return 1e5 + rank[p.id];                 // ineligible
+      let c = rank[p.id]*100 + prefIdx(p,slot)*4;
+      if(prev[si]===p.id) c -= 6;                                   // same slot as last quarter
+      if(opts.keepGK && slot==="GK"){ const gkPrev = prev[slots.indexOf("GK")]; if(gkPrev===p.id) c -= 400; else if(gkPrev) c += 60; }
+      return c;
+    }));
+    const asg = hungarian(cost);
+    const lineup = slots.map((slot,si)=>{ const j=asg[si]; const p=players[j]; return (p && canPlay(p,slot)) ? p.id : null; });
+    lineup.forEach(id=>{ if(id) played[id]++; });
+    lineups.push(lineup);
+  }
+  return lineups;
+}
+
+function scoreGame(lineups, players, slots, opts){
+  const played = Object.fromEntries(players.map(p=>[p.id,0]));
+  let empty=0, pref=0, subs=0, gkChanges=0;
+  lineups.forEach((L,q)=>L.forEach((id,si)=>{
+    if(!id){ empty++; return; }
+    played[id]++; pref += prefIdx(byId(id), slots[si]);
+    if(q>0 && !lineups[q-1].includes(id)) subs++;
+    if(q>0 && slots[si]==="GK" && lineups[q-1][si]!==id) gkChanges++;
+  }));
+  const counts = Object.values(played);
+  const under = counts.filter(c=>c<2).length;
+  const mean = counts.reduce((a,b)=>a+b,0)/Math.max(1,counts.length);
+  const spread = counts.reduce((a,c)=>a+(c-mean)**2,0);
+  return under*1e6 + empty*1e5 + spread*(opts.fewSubs?400:1200) + (Math.max(...counts)-Math.min(...counts))*200
+       + subs*(opts.fewSubs?120:30) + pref*3 + (opts.keepGK?gkChanges*300:0);
+}
+
+function solve(){
+  const players = avail(), slots = slotList(), opts = {keepGK:state.keepGK, fewSubs:state.fewSubs};
+  let best=null, bestScore=Infinity;
+  for(let i=0;i<160;i++){
+    const L = buildOneGame(players, slots, opts, Math.random);
+    const s = scoreGame(L, players, slots, opts);
+    if(s<bestScore){ bestScore=s; best=L; }
+  }
+  return best;
+}
+
+/* ---------- pluggable AI engines ---------- */
+async function solveWithLLM(){
+  const players = avail(), slots = slotList(), llm = state.llm;
+  const prompt = `You are a youth soccer coach's assistant. Build lineups for 4 quarters.
+Slots in order: ${JSON.stringify(slots)} (slot groups: GK; LB/CB/RB = DEF; LM/CM/RM = MID; LW/ST/RW = FWD).
+Players (id, name, positions they can play in order of preference): ${JSON.stringify(players.map(p=>({id:p.id,name:p.name,positions:p.positions})))}.
+Rules: every player plays at least 2 quarters; a player can only fill a slot listed in their positions; nobody plays two slots in the same quarter; keep playing time as even as possible${state.keepGK?"; keep the same goalkeeper all game if possible":""}${state.fewSubs?"; minimize substitutions":""}.
+Respond with ONLY JSON, no markdown: {"lineups":[[...],[...],[...],[...]]} where each inner array lists player ids in slot order (use null for an unfilled slot).`;
+  const model = llm.model || $("#llmModel").placeholder;
+  let text;
+  if(llm.provider==="anthropic"){
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":llm.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:2000,messages:[{role:"user",content:prompt}]})});
+    const d = await r.json(); text = (d.content||[]).map(c=>c.text||"").join("");
+  } else if(llm.provider==="gemini"){
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(llm.key)}`,{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
+    const d = await r.json(); text = d.candidates?.[0]?.content?.parts?.map(p=>p.text).join("")||"";
+  } else { // openai or custom (OpenAI-compatible)
+    const url = llm.provider==="custom" ? llm.endpoint : "https://api.openai.com/v1/chat/completions";
+    const r = await fetch(url,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+llm.key},
+      body:JSON.stringify({model,messages:[{role:"user",content:prompt}]})});
+    const d = await r.json(); text = d.choices?.[0]?.message?.content||"";
+  }
+  const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
+  const L = parsed.lineups;
+  const ids = new Set(players.map(p=>p.id));
+  if(!Array.isArray(L)||L.length!==4||L.some(q=>!Array.isArray(q)||q.length!==slots.length)) throw new Error("bad shape");
+  L.forEach(q=>q.forEach((id,si)=>{ if(id!==null && (!ids.has(id) || !canPlay(byId(id),slots[si]))) throw new Error("rule broken"); }));
+  return L;
+}
+
+$("#build").addEventListener("click", async ()=>{
+  const btn = $("#build"); const players = avail(), slots = slotList();
+  const alerts = [];
+  if(players.length < 2){ showAlerts(["Add at least two available players first."]); return; }
+  if(players.length < slots.length) alerts.push(`Only ${players.length} available for ${slots.length} slots — some spots will be empty.`);
+  if(players.length > slots.length*2) alerts.push(`${players.length} players for ${slots.length} slots — not everyone can get two quarters. Mark someone unavailable or use a bigger formation.`);
+  btn.disabled = true; btn.textContent = "Building…";
+  let L=null;
+  if(state.llm.provider!=="builtin"){
+    try{ L = await solveWithLLM(); } catch(e){ alerts.push("AI engine failed ("+(e.message||"error")+"). Used the built-in solver instead."); }
+  }
+  if(!L) L = solve();
+  state.lineups = L; state.activeQ = 0; save();
+  btn.disabled = false; btn.textContent = "Build lineups";
+  showAlerts(alerts); renderResults();
+  $("#results").scrollIntoView({behavior:"smooth",block:"start"});
+});
+function showAlerts(list){ $("#alerts").innerHTML = list.map(a=>`<div class="alert">${esc(a)}</div>`).join(""); }
+
+/* ---------- results UI ---------- */
+function slotCoords(slots){
+  const rowY = {GK:.90, LB:.70,CB:.70,RB:.70, LM:.48,CM:.48,RM:.48, LW:.24,ST:.24,RW:.24};
+  const colX = {GK:.5, LB:.18,CB:.5,RB:.82, LM:.18,CM:.5,RM:.82, LW:.18,ST:.5,RW:.82};
+  const groups = {};
+  slots.forEach((s,i)=>{ (groups[s]=groups[s]||[]).push(i); });
+  const out = new Array(slots.length);
+  Object.entries(groups).forEach(([s,idx])=>{
+    const cx = colX[s] ?? .5, cy = rowY[s] ?? .5, n = idx.length;
+    idx.forEach((si,k)=>{ const spread = Math.min(.22, .26/n); out[si] = {x: cx + (k-(n-1)/2)*spread*2, y: cy + (n>1 && s==="CM" ? (k%2?.05:-.05):0)}; });
+  });
+  return out;
+}
+function pitchSVG(q){
+  const slots = slotList(), L = state.lineups[q], prev = state.lineups[q-1]||[];
+  const pos = slotCoords(slots), W=320, H=430;
+  const chips = slots.map((s,si)=>{
+    const id = L[si], p = id && byId(id), {x,y} = pos[si];
+    const cx = 20 + x*(W-40), cy = 20 + y*(H-40);
+    const cls = !p ? "chip hole" : (q>0 && !prev.includes(id)) ? "chip new" : "chip";
+    return `<g class="${cls}" data-si="${si}" tabindex="0" role="button" aria-label="${s}: ${p?esc(p.name):"empty"}">
+      <circle cx="${cx}" cy="${cy}" r="17"/>
+      <text class="num" x="${cx}" y="${cy+5}">${p ? (p.num!=null?p.num:"•") : "?"}</text>
+      <text class="nm" x="${cx}" y="${cy+32}">${p ? esc(p.name.slice(0,10)) : "open"}</text>
+      <text class="slot" x="${cx}" y="${cy+44}">${s}</text></g>`;
+  }).join("");
+  return `<svg class="pitch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" id="pitchSvg">
+    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2">
+      <rect x="12" y="12" width="${W-24}" height="${H-24}" rx="2"/>
+      <line x1="12" y1="${H/2}" x2="${W-12}" y2="${H/2}"/><circle cx="${W/2}" cy="${H/2}" r="34"/>
+      <rect x="${W/2-80}" y="${H-12-66}" width="160" height="66"/><rect x="${W/2-36}" y="${H-12-24}" width="72" height="24"/>
+      <rect x="${W/2-80}" y="12" width="160" height="66"/><rect x="${W/2-36}" y="12" width="72" height="24"/>
+    </g>${chips}</svg>`;
+}
+function subsHTML(q){
+  if(q===0) return `<h3>Starting eleven</h3><p class="note">Substitutions show on the Q2–Q4 tabs.</p>`.replace("eleven", "lineup");
+  const slots = slotList(), prev = state.lineups[q-1], next = state.lineups[q];
+  const slotOf = (L,id) => { const i=L.indexOf(id); return i<0?null:slots[i]; };
+  const ins = [], outs = [], moves = [];
+  next.forEach((id,si)=>{
+    if(!id) return;
+    if(!prev.includes(id)){
+      const wasHere = prev[si];
+      const pairs = wasHere && !next.includes(wasHere) ? wasHere : null;
+      ins.push({id, slot:slots[si], forId:pairs});
+    } else if(slotOf(prev,id)!==slots[si]) moves.push({id, from:slotOf(prev,id), to:slots[si]});
+  });
+  prev.forEach(id=>{ if(id && !next.includes(id) && !ins.some(i=>i.forId===id)) outs.push(id); });
+  const li = [];
+  ins.forEach(i=> li.push(`<li><span class="tag in">In</span><span><strong>${esc(byId(i.id).name)}</strong> at <span class="slot">${i.slot}</span>${i.forId?` for <strong>${esc(byId(i.forId).name)}</strong>`:""}</span></li>`));
+  outs.forEach(id=> li.push(`<li><span class="tag out">Out</span><span><strong>${esc(byId(id).name)}</strong></span></li>`));
+  moves.forEach(m=> li.push(`<li><span class="tag move">Move</span><span><strong>${esc(byId(m.id).name)}</strong> <span class="slot">${m.from} → ${m.to}</span></span></li>`));
+  return `<h3>Subs going into Q${q+1}</h3>` + (li.length ? `<ul>${li.join("")}</ul>` : `<p class="note">No changes — same group stays on.</p>`);
+}
+function minutesHTML(){
+  const players = avail(), L = state.lineups;
+  const rows = players.map(p=>{
+    const on = L.map(q=>q.includes(p.id)); const n = on.filter(Boolean).length;
+    return `<tr><td>${esc(p.name)}</td><td>${on.map(o=>`<span class="q ${o?"on":""}"></span>`).join("")}</td><td style="text-align:right;${n<2?"color:var(--warn);font-weight:700":""}">${n}</td></tr>`;
+  }).join("");
+  return `<table><tr><th>Playing time</th><th>Q1–Q4</th><th style="text-align:right">Qtrs</th></tr>${rows}</table>`;
+}
+function renderResults(){
+  const R = $("#results");
+  if(!state.lineups){ R.hidden = true; return; }
+  R.hidden = false;
+  $("#tabs").innerHTML = [0,1,2,3].map(q=>`<button role="tab" aria-selected="${q===state.activeQ}" data-q="${q}">Q${q+1}</button>`).join("");
+  $("#quarterView").innerHTML = pitchSVG(state.activeQ);
+  $("#subs").innerHTML = subsHTML(state.activeQ);
+  $("#minutes").innerHTML = minutesHTML();
+  $("#editbox").hidden = true;
+}
+$("#tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b){ state.activeQ=Number(b.dataset.q); save(); renderResults(); } });
+$("#quarterView").addEventListener("click", e=>{ const g=e.target.closest(".chip"); if(g) openEdit(Number(g.dataset.si)); });
+$("#quarterView").addEventListener("keydown", e=>{ const g=e.target.closest(".chip"); if(g && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); openEdit(Number(g.dataset.si)); } });
+function openEdit(si){
+  const q = state.activeQ, slots = slotList(), L = state.lineups[q], cur = L[si];
+  const inQ = new Set(L.filter(Boolean));
+  const opts = avail().filter(p=>p.id===cur || !inQ.has(p.id)).sort((a,b)=>canPlay(b,slots[si])-canPlay(a,slots[si]))
+    .map(p=>`<option value="${p.id}" ${p.id===cur?"selected":""}>${esc(p.name)}${canPlay(p,slots[si])?"":" (not listed for "+groupOf(slots[si])+")"}</option>`).join("");
+  const box = $("#editbox"); box.hidden=false;
+  box.innerHTML = `<div class="row"><strong>Q${q+1} · ${slots[si]}</strong><select id="editSel" style="flex:1"><option value="">— leave empty —</option>${opts}</select><button class="btn tiny" id="editClose" type="button">Done</button></div>
+    <p class="note">Swaps here update the subs list and playing-time table below.</p>`;
+  $("#editSel").addEventListener("change", e=>{ L[si] = e.target.value || null; save(); renderResults(); openEdit(si); $("#editSel").focus(); });
+  $("#editClose").addEventListener("click", ()=>{ box.hidden=true; });
+}
+
+/* ---------- init ---------- */
+renderPosGrid(); setForm(null); renderRoster(); renderSetup(); renderResults();
+</script>
+</body>
+</html>
