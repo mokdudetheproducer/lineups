@@ -26,6 +26,12 @@
   section{background:var(--panel);border-radius:var(--radius);padding:16px;margin-bottom:14px}
   section > summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
   section > summary::-webkit-details-marker{display:none}
+  details > summary::marker{content:""}
+  details > summary::-webkit-details-marker{display:none}
+  .chev{display:inline-block;transition:transform .15s;color:var(--muted)}
+  details[open] > summary .chev{transform:rotate(180deg)}
+  .listbar{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+  .roster.collapsed{display:none}
   details section{margin:0}
   .count{color:var(--muted);font-weight:400}
   .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -108,7 +114,7 @@
   </header>
 
   <details id="rosterSec" open>
-    <summary><h2>Roster <span class="count" id="rosterCount"></span></h2><span>▾</span></summary>
+    <summary><h2>Roster <span class="count" id="rosterCount"></span></h2><span class="chev">▾</span></summary>
     <section>
       <div class="row">
         <div class="field"><label class="small" for="pName">Name</label><input id="pName" type="text" autocomplete="off"></div>
@@ -122,12 +128,13 @@
         <span style="flex:1"></span>
         <button class="btn tiny" id="sampleBtn" type="button">Reset to default roster</button>
       </div>
+      <div class="listbar"><h3 id="listTitle">Players</h3><button class="btn tiny" id="listToggle" type="button">Hide list</button></div>
       <ul class="roster" id="roster"></ul>
     </section>
   </details>
 
   <details id="setupSec">
-    <summary><h2>Game setup</h2><span>▾</span></summary>
+    <summary><h2>Game setup</h2><span class="chev">▾</span></summary>
     <section>
       <div class="row">
         <div class="field"><label class="small" for="size">Players on the field</label>
@@ -143,7 +150,7 @@
   </details>
 
   <details id="aiSec">
-    <summary><h2>Lineup engine</h2><span>▾</span></summary>
+    <summary><h2>Lineup engine</h2><span class="chev">▾</span></summary>
     <section>
       <div class="row">
         <div class="field"><label class="small" for="llmProvider">Engine</label>
@@ -210,7 +217,7 @@ const uid = () => Math.random().toString(36).slice(2,9);
 let state = load() || {
   players: [], size:11, formation:"4-3-3", slots: PRESETS[11], keepGK:true, fewSubs:false,
   llm:{provider:"builtin", key:"", model:"", endpoint:""},
-  lineups:null, activeQ:0
+  lineups:null, activeQ:0, listCollapsed:false
 };
 // first run: seed the default roster; older saves: convert specific positions (CB, LM…) to groups
 if(!state.players.length) state.players = defaultRoster();
@@ -248,6 +255,9 @@ function renderRoster(){
   const ul = $("#roster");
   const n = state.players.length, a = avail().length;
   $("#rosterCount").textContent = n ? `— ${a} of ${n} available` : "";
+  $("#listTitle").textContent = n ? `Players (${n})` : "Players";
+  ul.classList.toggle("collapsed", !!state.listCollapsed);
+  $("#listToggle").textContent = state.listCollapsed ? "Show list" : "Hide list";
   if(!n){ ul.innerHTML = `<li class="empty" style="display:block">No players yet. Add your first player above, or reset to the default roster.</li>`; return; }
   ul.innerHTML = state.players.map(p=>`
     <li class="${p.available?"":"off"}" data-id="${p.id}">
@@ -261,7 +271,7 @@ $("#roster").addEventListener("click", e=>{
   const id = b.closest("li").dataset.id, p = byId(id);
   if(b.dataset.act==="toggle"){ p.available = !p.available; }
   if(b.dataset.act==="del"){ if(confirm(`Remove ${p.name} from the roster?`)) state.players = state.players.filter(x=>x.id!==id); if(editingId===id) setForm(null); }
-  if(b.dataset.act==="edit"){ setForm(p); $("#pName").focus(); return; }
+  if(b.dataset.act==="edit"){ setForm(p); $("#pName").focus(); $("#pName").scrollIntoView({block:"center"}); return; }
   state.lineups=null; save(); renderRoster(); renderResults();
 });
 $("#saveBtn").addEventListener("click", ()=>{
@@ -272,6 +282,7 @@ $("#saveBtn").addEventListener("click", ()=>{
   state.lineups=null; save(); setForm(null); renderRoster(); renderResults(); $("#pName").focus();
 });
 $("#cancelBtn").addEventListener("click", ()=>setForm(null));
+$("#listToggle").addEventListener("click", ()=>{ state.listCollapsed=!state.listCollapsed; save(); renderRoster(); });
 $("#sampleBtn").addEventListener("click", ()=>{
   if(state.players.length && !confirm("Replace the current roster with the default team list?")) return;
   state.players = defaultRoster();
