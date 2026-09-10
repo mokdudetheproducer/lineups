@@ -132,7 +132,10 @@
       <div class="row">
         <div class="field"><label class="small" for="size">Players on the field</label>
           <select id="size"><option value="11">11 v 11</option><option value="9">9 v 9</option><option value="7">7 v 7</option></select></div>
-        <div class="field"><label class="small" for="slots">Formation slots (edit freely)</label><input id="slots" type="text"></div>
+        <div class="field"><label class="small" for="formation">Formation</label><select id="formation"></select></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="field"><label class="small" for="slots">Slots on the field (edit freely for a custom shape)</label><input id="slots" type="text"></div>
       </div>
       <label class="row" style="margin-top:12px;gap:8px;cursor:pointer"><input type="checkbox" id="keepGK"> Keep the same goalkeeper all game when possible</label>
       <label class="row" style="margin-top:6px;gap:8px;cursor:pointer"><input type="checkbox" id="fewSubs"> Prefer fewer substitutions over perfectly even time</label>
@@ -178,22 +181,34 @@
 <script>
 /* ---------- constants & state ---------- */
 const POSITIONS = ["GK","DEF","MID","FWD"];
-const GROUP = {GK:"GK", LB:"DEF",CB:"DEF",RB:"DEF", LM:"MID",CM:"MID",RM:"MID", LW:"FWD",ST:"FWD",RW:"FWD"};
+const GROUP = {GK:"GK", LB:"DEF",CB:"DEF",RB:"DEF",LWB:"DEF",RWB:"DEF", CDM:"MID",LM:"MID",CM:"MID",RM:"MID",CAM:"MID", LW:"FWD",ST:"FWD",RW:"FWD"};
 const groupOf = slot => GROUP[slot] || slot;
 const DEFAULT_PLAYERS = [["Aiden",["GK","DEF","MID"]],["Anders",["DEF","MID","FWD"]],["Axel",["MID","FWD"]],["Blake",["MID","FWD"]],
   ["Brendan",["DEF"]],["Dalton",["GK","DEF","MID","FWD"]],["Isai",["DEF","MID"]],["Jose",["GK","DEF","MID"]],["Mavin",["DEF","MID","FWD"]],
   ["Michael B",["DEF"]],["Michael T",["GK","DEF"]],["Parker",["DEF"]],["Saul",["DEF","MID"]],["Sean",["MID","FWD"]],["Spencer",["MID"]],
   ["Zachary",["GK","MID"]],["Zeth",["MID","FWD"]]];
 const defaultRoster = () => DEFAULT_PLAYERS.map(([name,positions])=>({id:uid(),name,num:null,positions,available:true}));
-const PRESETS = {
-  11:"GK, LB, CB, CB, RB, CM, CM, CM, LW, ST, RW",
-  9:"GK, LB, CB, RB, CM, CM, LW, ST, RW",
-  7:"GK, LB, RB, LM, CM, RM, ST"
+const FORMATIONS = {
+  11:{"4-3-3":"GK, LB, CB, CB, RB, CM, CM, CM, LW, ST, RW",
+      "4-4-2":"GK, LB, CB, CB, RB, LM, CM, CM, RM, ST, ST",
+      "4-2-3-1":"GK, LB, CB, CB, RB, CDM, CDM, LW, CAM, RW, ST",
+      "4-1-4-1":"GK, LB, CB, CB, RB, CDM, LM, CM, CM, RM, ST",
+      "3-5-2":"GK, CB, CB, CB, LM, CM, CM, CM, RM, ST, ST",
+      "3-4-3":"GK, CB, CB, CB, LM, CM, CM, RM, LW, ST, RW",
+      "5-3-2":"GK, LWB, CB, CB, CB, RWB, CM, CM, CM, ST, ST"},
+  9:{"3-2-3":"GK, LB, CB, RB, CM, CM, LW, ST, RW",
+     "3-3-2":"GK, LB, CB, RB, LM, CM, RM, ST, ST",
+     "2-3-3":"GK, CB, CB, LM, CM, RM, LW, ST, RW",
+     "3-1-3-1":"GK, LB, CB, RB, CDM, LM, CM, RM, ST"},
+  7:{"2-3-1":"GK, LB, RB, LM, CM, RM, ST",
+     "3-2-1":"GK, LB, CB, RB, CM, CM, ST",
+     "3-1-2":"GK, LB, CB, RB, CM, ST, ST"}
 };
+const PRESETS = Object.fromEntries(Object.entries(FORMATIONS).map(([k,v])=>[k, Object.values(v)[0]]));
 const KEY = "lineup-builder-v1";
 const uid = () => Math.random().toString(36).slice(2,9);
 let state = load() || {
-  players: [], size:11, slots: PRESETS[11], keepGK:true, fewSubs:false,
+  players: [], size:11, formation:"4-3-3", slots: PRESETS[11], keepGK:true, fewSubs:false,
   llm:{provider:"builtin", key:"", model:"", endpoint:""},
   lineups:null, activeQ:0
 };
@@ -264,8 +279,15 @@ $("#sampleBtn").addEventListener("click", ()=>{
 });
 
 /* ---------- setup UI ---------- */
+function renderFormations(){
+  const names = Object.keys(FORMATIONS[state.size]);
+  const cur = names.find(n=>FORMATIONS[state.size][n]===state.slots) || "custom";
+  state.formation = cur;
+  $("#formation").innerHTML = names.map(n=>`<option value="${n}">${n}</option>`).join("") + `<option value="custom">Custom</option>`;
+  $("#formation").value = cur;
+}
 function renderSetup(){
-  $("#size").value = state.size; $("#slots").value = state.slots;
+  $("#size").value = state.size; $("#slots").value = state.slots; renderFormations();
   $("#keepGK").checked = state.keepGK; $("#fewSubs").checked = state.fewSubs;
   $("#llmProvider").value = state.llm.provider; $("#llmKey").value = state.llm.key;
   $("#llmModel").value = state.llm.model; $("#llmEndpoint").value = state.llm.endpoint;
@@ -278,8 +300,9 @@ function syncLLMFields(){
   const defaults = {anthropic:"claude-sonnet-4-6", openai:"gpt-4.1-mini", gemini:"gemini-2.5-flash", custom:""};
   $("#llmModel").placeholder = defaults[p]||"";
 }
-$("#size").addEventListener("change", e=>{ state.size=Number(e.target.value); state.slots=PRESETS[state.size]; $("#slots").value=state.slots; state.lineups=null; save(); renderResults(); });
-$("#slots").addEventListener("change", e=>{ state.slots=e.target.value; state.lineups=null; save(); renderResults(); });
+$("#size").addEventListener("change", e=>{ state.size=Number(e.target.value); state.slots=PRESETS[state.size]; $("#slots").value=state.slots; renderFormations(); state.lineups=null; save(); renderResults(); });
+$("#formation").addEventListener("change", e=>{ const f=FORMATIONS[state.size][e.target.value]; if(!f) return; state.slots=f; $("#slots").value=f; renderFormations(); state.lineups=null; save(); renderResults(); });
+$("#slots").addEventListener("change", e=>{ state.slots=e.target.value; renderFormations(); state.lineups=null; save(); renderResults(); });
 $("#keepGK").addEventListener("change", e=>{ state.keepGK=e.target.checked; save(); });
 $("#fewSubs").addEventListener("change", e=>{ state.fewSubs=e.target.checked; save(); });
 ["llmProvider","llmKey","llmModel","llmEndpoint"].forEach(id=> $("#"+id).addEventListener("input", ()=>{
@@ -381,7 +404,7 @@ function solve(){
 async function solveWithLLM(){
   const players = avail(), slots = slotList(), llm = state.llm;
   const prompt = `You are a youth soccer coach's assistant. Build lineups for 4 quarters.
-Slots in order: ${JSON.stringify(slots)} (slot groups: GK; LB/CB/RB = DEF; LM/CM/RM = MID; LW/ST/RW = FWD).
+Slots in order: ${JSON.stringify(slots)} (slot groups: GK; LB/CB/RB/LWB/RWB = DEF; CDM/LM/CM/RM/CAM = MID; LW/ST/RW = FWD).
 Players (id, name, positions they can play in order of preference): ${JSON.stringify(players.map(p=>({id:p.id,name:p.name,positions:p.positions})))}.
 Rules: every player plays at least 2 quarters; a player can only fill a slot listed in their positions; nobody plays two slots in the same quarter; keep playing time as even as possible${state.keepGK?"; keep the same goalkeeper all game if possible":""}${state.fewSubs?"; minimize substitutions":""}.
 Respond with ONLY JSON, no markdown: {"lineups":[[...],[...],[...],[...]]} where each inner array lists player ids in slot order (use null for an unfilled slot).`;
@@ -430,14 +453,14 @@ function showAlerts(list){ $("#alerts").innerHTML = list.map(a=>`<div class="ale
 
 /* ---------- results UI ---------- */
 function slotCoords(slots){
-  const rowY = {GK:.90, LB:.70,CB:.70,RB:.70, LM:.48,CM:.48,RM:.48, LW:.24,ST:.24,RW:.24};
-  const colX = {GK:.5, LB:.18,CB:.5,RB:.82, LM:.18,CM:.5,RM:.82, LW:.18,ST:.5,RW:.82};
+  const rowY = {GK:.90, LB:.70,CB:.72,RB:.70,LWB:.60,RWB:.60, CDM:.58,LM:.46,CM:.48,RM:.46,CAM:.36, LW:.26,ST:.20,RW:.26};
+  const colX = {GK:.5, LB:.15,CB:.5,RB:.85,LWB:.12,RWB:.88, CDM:.5,LM:.15,CM:.5,RM:.85,CAM:.5, LW:.18,ST:.5,RW:.82};
   const groups = {};
   slots.forEach((s,i)=>{ (groups[s]=groups[s]||[]).push(i); });
   const out = new Array(slots.length);
   Object.entries(groups).forEach(([s,idx])=>{
     const cx = colX[s] ?? .5, cy = rowY[s] ?? .5, n = idx.length;
-    idx.forEach((si,k)=>{ const spread = Math.min(.22, .26/n); out[si] = {x: cx + (k-(n-1)/2)*spread*2, y: cy + (n>1 && s==="CM" ? (k%2?.05:-.05):0)}; });
+    idx.forEach((si,k)=>{ const spread = Math.min(.22, .26/n); out[si] = {x: cx + (k-(n-1)/2)*spread*2, y: cy + (n>2 && s==="CM" ? (k%2?.05:-.05):0)}; });
   });
   return out;
 }
