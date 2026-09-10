@@ -446,6 +446,7 @@ $("#build").addEventListener("click", async ()=>{
   const btn = $("#build"); const players = avail(), slots = slotList();
   const alerts = [];
   if(players.length < 2){ showAlerts(["Add at least two available players first."]); return; }
+  if(state.lineups && !confirm("You already have lineups for this game. Build new ones and replace them?")) return;
   if(players.length < slots.length) alerts.push(`Only ${players.length} available for ${slots.length} slots — some spots will be empty.`);
   if(players.length > slots.length*2) alerts.push(`${players.length} players for ${slots.length} slots — not everyone can get two quarters. Mark someone unavailable or use a bigger formation.`);
   btn.disabled = true; btn.textContent = "Building…";
